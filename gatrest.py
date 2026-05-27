@@ -491,10 +491,8 @@ def cmd_user_add(args):
     if args.name in users and not args.force:
         raise GatrestError("User '%s' already exists for server '%s'. Use --force to replace it." % (args.name, args.server))
 
-    password = args.password_value
-    if args.password:
-        password = getpass.getpass("Password for %s: " % (args.username or args.name))
-    if password is None:
+    password = args.password
+    if args.prompt_password or password is None:
         password = getpass.getpass("Password for %s: " % (args.username or args.name))
 
     users[args.name] = {
@@ -516,8 +514,10 @@ def cmd_user_set(args):
     user = require_user(server, args.name)
     if args.username:
         user["username"] = args.username
-    if args.password or args.password_value is not None:
-        user["password"] = args.password_value if args.password_value is not None else getpass.getpass("Password for %s: " % user.get("username", args.name))
+    if args.prompt_password:
+        user["password"] = getpass.getpass("Password for %s: " % user.get("username", args.name))
+    elif args.password is not None:
+        user["password"] = args.password
     save_config(config)
     print("Updated user '%s' on server '%s'." % (args.name, args.server))
 
@@ -675,7 +675,7 @@ def build_parser():
         epilog=(
             "Examples:\n"
             "  gatrest server add dngserver1 --host 192.168.1.2 -c A1 -o 1234A\n"
-            "  gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password\n"
+            "  gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password password\n"
             "  gatrest upload -s dngserver1 -u ewsmyth ./exports\n"
             "  gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json\n"
             "  gatrest show servers\n"
@@ -734,8 +734,9 @@ def build_parser():
     user_add.add_argument("name", help="local user profile name")
     user_add.add_argument("-s", "--server", required=True, help="server profile name")
     user_add.add_argument("--username", "-n", help="DataNaviGatr username or email")
-    user_add.add_argument("--password", "-p", action="store_true", help="prompt for password")
-    user_add.add_argument("--password-value", "-P", help="password value; visible in shell history")
+    user_add_password = user_add.add_mutually_exclusive_group()
+    user_add_password.add_argument("--password", "-p", help="DataNaviGatr password; visible in shell history")
+    user_add_password.add_argument("--prompt-password", action="store_true", help="prompt for password without printing it")
     user_add.add_argument("--force", "-f", action="store_true", help="replace an existing user profile")
     user_add.set_defaults(func=cmd_user_add)
 
@@ -743,8 +744,9 @@ def build_parser():
     user_set.add_argument("name", help="local user profile name")
     user_set.add_argument("-s", "--server", required=True, help="server profile name")
     user_set.add_argument("--username", "-n", help="DataNaviGatr username or email")
-    user_set.add_argument("--password", "-p", action="store_true", help="prompt for password")
-    user_set.add_argument("--password-value", "-P", help="password value; visible in shell history")
+    user_set_password = user_set.add_mutually_exclusive_group()
+    user_set_password.add_argument("--password", "-p", help="DataNaviGatr password; visible in shell history")
+    user_set_password.add_argument("--prompt-password", action="store_true", help="prompt for password without printing it")
     user_set.set_defaults(func=cmd_user_set)
 
     user_remove = user_subparsers.add_parser("remove", aliases=["rm"], help="remove a saved user")

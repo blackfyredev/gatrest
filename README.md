@@ -84,16 +84,16 @@ That creates a profile named `dngserver1` with:
 Add a user:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password
+gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password "password"
 ```
 
-The `--password` flag prompts for the password without printing it in the
-terminal.
+This stores a local user profile named `ewsmyth` with DataNaviGatr username
+`ewsmyth` and password `password`.
 
-You can also pass the password directly, but it may be saved in shell history:
+If you do not want the password visible in shell history, use the prompt form:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --username ewsmyth -P "password"
+gatrest user add -s dngserver1 ewsmyth --username ewsmyth --prompt-password
 ```
 
 ## Upload
@@ -251,7 +251,7 @@ gatrest server rm dngserver1
 Add a user:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password
+gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password "password"
 ```
 
 Change username:
@@ -263,7 +263,13 @@ gatrest user set -s dngserver1 ewsmyth --username newname
 Change password:
 
 ```bash
-gatrest user set -s dngserver1 ewsmyth --password
+gatrest user set -s dngserver1 ewsmyth --password "newpassword"
+```
+
+Change password using a hidden prompt:
+
+```bash
+gatrest user set -s dngserver1 ewsmyth --prompt-password
 ```
 
 Remove a user:
@@ -302,7 +308,7 @@ options:
 
 Examples:
   gatrest server add dngserver1 --host 192.168.1.2 -c A1 -o 1234A
-  gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password
+  gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password password
   gatrest upload -s dngserver1 -u ewsmyth ./exports
   gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json
   gatrest show servers
