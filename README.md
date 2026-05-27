@@ -144,16 +144,13 @@ Show one server:
 gatrest show dngserver1
 ```
 
-Show one server with saved passwords visible:
+This displays the server name, URL, collector code, organization code, and
+configured users.
+
+Show a saved user's password:
 
 ```bash
-gatrest show dngserver1 --show-passwords
-```
-
-Short form:
-
-```bash
-gatrest show dngserver1 -P
+gatrest show ewsmyth password -s dngserver1
 ```
 
 ## Defaults
@@ -246,6 +243,8 @@ Short alias:
 gatrest server rm dngserver1
 ```
 
+Removing a server also removes the users saved under that server profile.
+
 ## Manage Users
 
 Add a user:
@@ -298,7 +297,7 @@ positional arguments:
     server              manage server profiles
     user                manage saved users
     use                 set default server or user
-    show                show configured servers or one server
+    show                show servers, one server, or one saved password
     upload              upload JSON files
     doctor              test certificate download and login
 
@@ -312,7 +311,24 @@ Examples:
   gatrest upload -s dngserver1 -u ewsmyth ./exports
   gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json
   gatrest show servers
-  gatrest show dngserver1 --show-passwords
+  gatrest show dngserver1
+  gatrest show ewsmyth password -s dngserver1
+```
+
+Show command help:
+
+```text
+usage: gatrest show [-h] [-s SERVER] target [detail]
+
+positional arguments:
+  target                'servers', a server profile name, or a user profile
+                        name when detail is 'password'
+  detail                optional detail to show; currently supports 'password'
+
+options:
+  -h, --help            show this help message and exit
+  -s SERVER, --server SERVER
+                        server profile name when showing a user password
 ```
 
 Command-specific help:

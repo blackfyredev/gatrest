@@ -73,7 +73,7 @@ def load_config():
 
 def save_config(config):
     CONFIG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    tmp_path = CONFIG_PATH.with_suffix(".json.tmp")
+    tmp_path = CONFIG_PATH.with_name("%s.%s.tmp" % (CONFIG_PATH.name, uuid.uuid4().hex))
     with tmp_path.open("w", encoding="utf-8") as config_file:
         json.dump(config, config_file, indent=2, sort_keys=True)
         config_file.write("\n")
@@ -551,18 +551,11 @@ def cmd_use(args):
     print("Default %s set to '%s'." % (args.kind, args.name))
 
 
-def print_server_details(name, server, show_passwords=False):
+def print_server_details(name, server):
     print("Server: %s" % name)
-    print("  base_url: %s" % server.get("base_url", ""))
-    print("  auth_url: %s" % server.get("auth_url", ""))
-    print("  ingest_url: %s" % server.get("ingest_url", ""))
+    print("  url: %s" % server.get("base_url", ""))
     print("  collector_code: %s" % server.get("collector_code", ""))
     print("  organization_code: %s" % server.get("organization_code", ""))
-    print("  batch_size: %s" % server.get("batch_size", DEFAULT_BATCH_SIZE))
-    print("  timeout_seconds: %s" % server.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS))
-    print("  trust_self_signed: %s" % server.get("trust_self_signed", True))
-    print("  verify_hostname: %s" % server.get("verify_hostname", False))
-    print("  cert_path: %s" % server.get("cert_path", DEFAULT_CERT_PATH))
     print("  users:")
     users = server.get("users") or {}
     if not users:
@@ -570,16 +563,23 @@ def print_server_details(name, server, show_passwords=False):
         return
     for user_name in sorted(users):
         user = users[user_name]
-        password = user.get("password", "")
-        displayed_password = password if show_passwords else ("*" * min(len(password), 12) if password else "")
-        print("    %s:" % user_name)
-        print("      username: %s" % user.get("username", ""))
-        print("      password: %s" % displayed_password)
+        username = user.get("username", "")
+        print("    %s  username=%s" % (user_name, username))
 
 
 def cmd_show(args):
     config = load_config()
     servers = config.get("servers") or {}
+    if args.detail == "password":
+        server_name = resolve_server_name(config, args.server)
+        server = require_server(config, server_name)
+        user = require_user(server, args.target)
+        print("%s password: %s" % (args.target, user.get("password", "")))
+        return
+
+    if args.detail:
+        raise GatrestError("Unknown show detail '%s'. Did you mean 'password'?" % args.detail)
+
     if args.target == "servers":
         if not servers:
             print("No servers configured.")
@@ -591,7 +591,7 @@ def cmd_show(args):
         return
 
     server = require_server(config, args.target)
-    print_server_details(args.target, server, show_passwords=args.show_passwords)
+    print_server_details(args.target, server)
 
 
 def cmd_upload(args):
@@ -679,7 +679,8 @@ def build_parser():
             "  gatrest upload -s dngserver1 -u ewsmyth ./exports\n"
             "  gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json\n"
             "  gatrest show servers\n"
-            "  gatrest show dngserver1 --show-passwords\n"
+            "  gatrest show dngserver1\n"
+            "  gatrest show ewsmyth password -s dngserver1\n"
             "\nConfig: %s" % CONFIG_PATH
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -760,9 +761,10 @@ def build_parser():
     use_parser.add_argument("-s", "--server", help="server profile name when setting default user")
     use_parser.set_defaults(func=cmd_use)
 
-    show_parser = subparsers.add_parser("show", help="show configured servers or one server")
-    show_parser.add_argument("target", help="'servers' or a server profile name")
-    show_parser.add_argument("--show-passwords", "-P", action="store_true", help="print saved passwords in clear text")
+    show_parser = subparsers.add_parser("show", help="show servers, one server, or one saved password")
+    show_parser.add_argument("target", help="'servers', a server profile name, or a user profile name when detail is 'password'")
+    show_parser.add_argument("detail", nargs="?", help="optional detail to show; currently supports 'password'")
+    show_parser.add_argument("-s", "--server", help="server profile name when showing a user password")
     show_parser.set_defaults(func=cmd_show)
 
     upload_parser = subparsers.add_parser("upload", help="upload JSON files")
