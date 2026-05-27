@@ -84,23 +84,16 @@ That creates a profile named `dngserver1` with:
 Add a user:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --password "password"
+gatrest user add -s dngserver1 --username ewsmyth --password "password"
 ```
 
-This stores a local user profile named `ewsmyth`. Because no `--username` is
-provided, `gatrest` also uses `ewsmyth` as the DataNaviGatr login username.
+This stores the DataNaviGatr server account username and password that `gatrest`
+will use when logging in to that DNG server.
 
 If you do not want the password visible in shell history, use the prompt form:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --prompt-password
-```
-
-Use `--username` only when the local profile name should differ from the actual
-DataNaviGatr login username:
-
-```bash
-gatrest user add -s dngserver1 analyst --username ewsmyth --password "password"
+gatrest user add -s dngserver1 --username ewsmyth --prompt-password
 ```
 
 ## Upload
@@ -257,7 +250,7 @@ Removing a server also removes the users saved under that server profile.
 Add a user:
 
 ```bash
-gatrest user add -s dngserver1 ewsmyth --password "password"
+gatrest user add -s dngserver1 --username ewsmyth --password "password"
 ```
 
 Change username:
@@ -314,7 +307,7 @@ options:
 
 Examples:
   gatrest server add dngserver1 --host 192.168.1.2 -c A1 -o 1234A
-  gatrest user add -s dngserver1 ewsmyth --password password
+  gatrest user add -s dngserver1 --username ewsmyth --password password
   gatrest upload -s dngserver1 -u ewsmyth ./exports
   gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json
   gatrest show servers
@@ -328,14 +321,14 @@ Show command help:
 usage: gatrest show [-h] [-s SERVER] target [detail]
 
 positional arguments:
-  target                'servers', a server profile name, or a user profile
-                        name when detail is 'password'
+  target                'servers', a server profile name, or a DataNaviGatr
+                        username/email when detail is 'password'
   detail                optional detail to show; currently supports 'password'
 
 options:
   -h, --help            show this help message and exit
   -s SERVER, --server SERVER
-                        server profile name when showing a user password
+                        server profile name when showing an account password
 ```
 
 Command-specific help:

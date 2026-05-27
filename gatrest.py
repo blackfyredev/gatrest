@@ -488,38 +488,48 @@ def cmd_user_add(args):
     config = load_config()
     server = require_server(config, args.server)
     users = server.setdefault("users", {})
-    if args.name in users and not args.force:
-        raise GatrestError("User '%s' already exists for server '%s'. Use --force to replace it." % (args.name, args.server))
+    user_key = args.username
+    if user_key in users and not args.force:
+        raise GatrestError("User '%s' already exists for server '%s'. Use --force to replace it." % (user_key, args.server))
 
     password = args.password
     if args.prompt_password or password is None:
-        password = getpass.getpass("Password for %s: " % (args.username or args.name))
+        password = getpass.getpass("Password for %s: " % user_key)
 
-    users[args.name] = {
-        "username": args.username or args.name,
+    users[user_key] = {
+        "username": args.username,
         "password": password,
     }
 
     if not config["defaults"].get("server"):
         config["defaults"]["server"] = args.server
     if not config["defaults"].get("user"):
-        config["defaults"]["user"] = args.name
+        config["defaults"]["user"] = user_key
     save_config(config)
-    print("Added user '%s' to server '%s'." % (args.name, args.server))
+    print("Added user '%s' to server '%s'." % (user_key, args.server))
 
 
 def cmd_user_set(args):
     config = load_config()
     server = require_server(config, args.server)
     user = require_user(server, args.name)
-    if args.username:
+    user_key = args.name
+    if args.username and args.username != args.name:
+        users = server.setdefault("users", {})
+        if args.username in users:
+            raise GatrestError("User '%s' already exists for server '%s'." % (args.username, args.server))
+        del users[args.name]
+        users[args.username] = user
+        if config.get("defaults", {}).get("user") == args.name:
+            config["defaults"]["user"] = args.username
+        user_key = args.username
         user["username"] = args.username
     if args.prompt_password:
-        user["password"] = getpass.getpass("Password for %s: " % user.get("username", args.name))
+        user["password"] = getpass.getpass("Password for %s: " % user.get("username", user_key))
     elif args.password is not None:
         user["password"] = args.password
     save_config(config)
-    print("Updated user '%s' on server '%s'." % (args.name, args.server))
+    print("Updated user '%s' on server '%s'." % (user_key, args.server))
 
 
 def cmd_user_remove(args):
@@ -562,9 +572,7 @@ def print_server_details(name, server):
         print("    none")
         return
     for user_name in sorted(users):
-        user = users[user_name]
-        username = user.get("username", "")
-        print("    %s  username=%s" % (user_name, username))
+        print("    %s" % user_name)
 
 
 def cmd_show(args):
@@ -665,7 +673,7 @@ def cmd_doctor(args):
 
 def add_common_server_user_flags(parser):
     parser.add_argument("-s", "--server", help="server profile name")
-    parser.add_argument("-u", "--user", help="user profile name")
+    parser.add_argument("-u", "--user", help="DataNaviGatr username or email")
 
 
 def build_parser():
@@ -675,7 +683,7 @@ def build_parser():
         epilog=(
             "Examples:\n"
             "  gatrest server add dngserver1 --host 192.168.1.2 -c A1 -o 1234A\n"
-            "  gatrest user add -s dngserver1 ewsmyth --password password\n"
+            "  gatrest user add -s dngserver1 --username ewsmyth --password password\n"
             "  gatrest upload -s dngserver1 -u ewsmyth ./exports\n"
             "  gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json\n"
             "  gatrest show servers\n"
@@ -728,43 +736,42 @@ def build_parser():
     server_remove.add_argument("name", help="server profile name")
     server_remove.set_defaults(func=cmd_server_remove)
 
-    user_parser = subparsers.add_parser("user", help="manage saved users")
+    user_parser = subparsers.add_parser("user", help="manage saved DataNaviGatr accounts")
     user_subparsers = user_parser.add_subparsers(dest="user_command", required=True)
 
-    user_add = user_subparsers.add_parser("add", help="add a user to a server")
-    user_add.add_argument("name", help="local user profile name; used as the login username unless --username is set")
+    user_add = user_subparsers.add_parser("add", help="add a DataNaviGatr account to a server")
     user_add.add_argument("-s", "--server", required=True, help="server profile name")
-    user_add.add_argument("--username", "-n", help="DataNaviGatr username or email")
+    user_add.add_argument("--username", "-n", required=True, help="DataNaviGatr username or email")
     user_add_password = user_add.add_mutually_exclusive_group()
     user_add_password.add_argument("--password", "-p", help="DataNaviGatr password; visible in shell history")
     user_add_password.add_argument("--prompt-password", action="store_true", help="prompt for password without printing it")
-    user_add.add_argument("--force", "-f", action="store_true", help="replace an existing user profile")
+    user_add.add_argument("--force", "-f", action="store_true", help="replace an existing saved account")
     user_add.set_defaults(func=cmd_user_add)
 
-    user_set = user_subparsers.add_parser("set", help="change a saved user")
-    user_set.add_argument("name", help="local user profile name")
+    user_set = user_subparsers.add_parser("set", help="change a saved DataNaviGatr account")
+    user_set.add_argument("name", help="DataNaviGatr username or email to update")
     user_set.add_argument("-s", "--server", required=True, help="server profile name")
-    user_set.add_argument("--username", "-n", help="DataNaviGatr username or email")
+    user_set.add_argument("--username", "-n", help="new DataNaviGatr username or email")
     user_set_password = user_set.add_mutually_exclusive_group()
     user_set_password.add_argument("--password", "-p", help="DataNaviGatr password; visible in shell history")
     user_set_password.add_argument("--prompt-password", action="store_true", help="prompt for password without printing it")
     user_set.set_defaults(func=cmd_user_set)
 
-    user_remove = user_subparsers.add_parser("remove", aliases=["rm"], help="remove a saved user")
-    user_remove.add_argument("name", help="local user profile name")
+    user_remove = user_subparsers.add_parser("remove", aliases=["rm"], help="remove a saved DataNaviGatr account")
+    user_remove.add_argument("name", help="DataNaviGatr username or email")
     user_remove.add_argument("-s", "--server", required=True, help="server profile name")
     user_remove.set_defaults(func=cmd_user_remove)
 
     use_parser = subparsers.add_parser("use", help="set default server or user")
     use_parser.add_argument("kind", choices=["server", "user"], help="default type to set")
-    use_parser.add_argument("name", help="server or user profile name")
-    use_parser.add_argument("-s", "--server", help="server profile name when setting default user")
+    use_parser.add_argument("name", help="server profile name or DataNaviGatr username/email")
+    use_parser.add_argument("-s", "--server", help="server profile name when setting default DataNaviGatr account")
     use_parser.set_defaults(func=cmd_use)
 
     show_parser = subparsers.add_parser("show", help="show servers, one server, or one saved password")
-    show_parser.add_argument("target", help="'servers', a server profile name, or a user profile name when detail is 'password'")
+    show_parser.add_argument("target", help="'servers', a server profile name, or a DataNaviGatr username/email when detail is 'password'")
     show_parser.add_argument("detail", nargs="?", help="optional detail to show; currently supports 'password'")
-    show_parser.add_argument("-s", "--server", help="server profile name when showing a user password")
+    show_parser.add_argument("-s", "--server", help="server profile name when showing an account password")
     show_parser.set_defaults(func=cmd_show)
 
     upload_parser = subparsers.add_parser("upload", help="upload JSON files")
