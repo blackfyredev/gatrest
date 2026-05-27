@@ -675,7 +675,7 @@ def build_parser():
         epilog=(
             "Examples:\n"
             "  gatrest server add dngserver1 --host 192.168.1.2 -c A1 -o 1234A\n"
-            "  gatrest user add -s dngserver1 ewsmyth --username ewsmyth --password password\n"
+            "  gatrest user add -s dngserver1 ewsmyth --password password\n"
             "  gatrest upload -s dngserver1 -u ewsmyth ./exports\n"
             "  gatrest upload -s dngserver1 -u ewsmyth -c Y4 -o 8322Y file.json\n"
             "  gatrest show servers\n"
@@ -732,7 +732,7 @@ def build_parser():
     user_subparsers = user_parser.add_subparsers(dest="user_command", required=True)
 
     user_add = user_subparsers.add_parser("add", help="add a user to a server")
-    user_add.add_argument("name", help="local user profile name")
+    user_add.add_argument("name", help="local user profile name; used as the login username unless --username is set")
     user_add.add_argument("-s", "--server", required=True, help="server profile name")
     user_add.add_argument("--username", "-n", help="DataNaviGatr username or email")
     user_add_password = user_add.add_mutually_exclusive_group()
